@@ -7,12 +7,15 @@ class Blockchain() {
 }
 */
 const sha256 = require('sha256');
+const currentNodeUrl = process.argv[3];
 
 function Blockchain() {
     this.chain = [];
     this.pendingTransactions = [];
     this.createNewBlock(100, "0", "0");
-    console.log("<<<<new chain created>>>>");
+    this.currentNodeUrl = currentNodeUrl;
+    this.networkNodes = [];
+    //console.log("<<<<new chain created>>>>");
 }
 
 Blockchain.prototype.createNewBlock = function (nonce, previousBlockHash, hash) {

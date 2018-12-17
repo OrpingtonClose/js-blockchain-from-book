@@ -75,7 +75,7 @@ Blockchain.prototype.proofOfWork = function (previousBlockHash, currentblockData
         }
         nonce += 1;
     }
-    console.log(powResults);
+    //console.log(powResults);
     return nonce - 1;
 }
 

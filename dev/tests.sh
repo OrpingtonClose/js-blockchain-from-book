@@ -20,3 +20,22 @@ curl -X POST $ROOTURL/register-nodes-bulk -H "Content-Type: application/json" -d
     ]
 }
 EOF
+
+curl -X POST -H "Content-Type: application/json" -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3002"}
+EOF
+
+
+curl http://localhost:3001/blockchain | jq
+curl http://localhost:3002/blockchain | jq
+
+netstat --listening --programs | grep :300 | awk '{print $7}' | cut -d'/' -f1 | xargs -n 1 kill
+
+curl -X POST -H "Content-Type: application/json" -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3003"}
+EOF
+
+curl http://localhost:3001/blockchain | jq
+
+./node_modules/mocha/bin/mocha dev/
+./node_modules/mocha/bin/mocha dev/promise-test.js

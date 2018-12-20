@@ -52,6 +52,132 @@ describe('network nodes registration', function() {
         Promise.all(promises);
         done();
     });
+    
+    it.only('register and broadcast transaction', function(done) {
+        let urls = allServers.map(server => `http://localhost:${server.address().port}`);
+        const transactionToSend = {
+            amount: 100, 
+            sender: "ABC", 
+            recipient: "XYZ"
+        };
+        const rq = () => request(broadcastServer);
+        Promise.all(urls.map(url=>{
+            return rq().post('/register-and-broadcast-node')
+                       .send({newNodeUrl: url});
+        })).catch(err=>{
+            done(err);
+        }).then(date=>{
+            Promise.all(rq().post('/transaction/broadcast').send(transactionToSend));
+        }).catch(err=>{
+            done(err);
+        }).then(date=>{
+            Promise.all(allServers.map(server=>{
+                return request(server).get('/blockchain').end( (err, res) => {
+                    console.log(res.body);
+                });
+            }));
+            request(broadcastServer).get('/blockchain').then(res=>{
+                console.log(res.body);
+            }).cache(err=>{
+                console.log(err);
+            });
+            done();
+        });
+
+        //done();
+        // rq().post('/transaction/broadcast')
+        //     .send(transactionToSend)
+        //     .end();
+        // .catch(err=>{
+        //     done(err);
+        // }).then(data=>{
+        // })
+        // done();
+        //.catch(err=>{
+        //     done(err);
+        // }).then(data=>{
+            // Promise.all(allServers.map(server=>{
+            //     return request(server).get('/blockchain').then(res=>{
+            //         return res.body.pendingTransactions;
+            //         // let pendingTransactions = res.body.pendingTransactions;
+            //         // expect(pendingTransactions).to.have.lengthOf(1);
+            //         // let pendingTransaction = pendingTransactions[0];
+            //         // Object.keys(transactionToSend).forEach(key=>{
+            //         //     expect(pendingTransaction[key]).to.be.equal(transactionToSend[key]);
+            //         //     console.log(pendingTransaction);
+            //         // });
+            //     }).then(data=>{
+            //         //console.log(data);
+            //     });
+            // })).then(data=>{
+            //     done();
+            // }).catch(err=>{
+            //     done(err);
+            // });
+        // });
+        
+        
+        //    request(broadcastServer).post('/transaction/broadcast')
+        //                            .send(transactionToSend)
+
+        console.log("================");
+        //.then(data=>{
+        //    request(broadcastServer).post('/transaction/broadcast')
+        //                            .send(transactionToSend)
+                                    // .then(data=>{
+                                    //     allServers.forEach(server=>{
+                                    //         request(server).get('/blockchain').end( (err, res) => {
+                                    //             console.log(err);
+                                    //         });
+                                    //     });
+                                        //console.log(data);
+                                        // allServers.forEach(server=>{
+                                        //     request(server).get('/blockchain')
+                                        //                    .then(data=>{
+                                        //         console.log("|||||||||||||||||||||||||||||");
+                                        //         let pendingTransactions = data.body.pendingTransactions;
+                                        //         expect(pendingTransactions).to.have.lengthOf(2);
+                                        //         expect(data.body.pendingTransactions[0]).to.be.deep.equal(transactionToSend);
+                                        //     });
+                                        // });
+                                    // }).then(data=>{
+                                    //     done();
+                                    // }).catch(err=>{
+                                    //     done(err);
+                                    // });
+        // }).then(data=>{
+        //     console.log("|||||||||||||||||||||||||||||");
+        //     Promise.all(allServers.map(server=>{
+        //         request(server).get('/blockchain').end( (err, res) => {
+        //             console.log(res.body);
+        //         });
+        //     }))
+            // allServers.forEach(server=>{
+            //     request(server).get('/blockchain').end( (err, res) => {
+            //         console.log(res);
+            //     });
+            // });
+        // }).then(data=>{
+        //     done()
+        // }).catch(err=>{
+        //     done(err)
+        // });;
+    });
+    it('register and brodcast node', function(done) {
+        let newNodeUrl = `http://localhost:${newServer.address().port}`;
+        request(broadcastServer).post('/register-node')
+                                .send({newNodeUrl})
+                                .then(res=>{
+                                    request(broadcastServer).get('/blockchain').then(blockchainRes=>{
+                                        expect(blockchainRes.body.networkNodes).to.be.an('array').that.includes(newNodeUrl);
+                                    }).then(data=>{
+                                        done();
+                                    }).catch(err=>{
+                                        done(err);
+                                    });
+                                });
+    });
+    
 
     it('register and brodcast single node', function testSlash(done) {
         let newNodeUrl = `http://localhost:${newServer.address().port}`;

@@ -5,17 +5,21 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "cucumber": "node_modules/cucumber/bin/cucumber-js features/ -r steps/",
     "node_1": "nodemon --watch dev -e js dev/networkNode.js 3001 http://localhost:3001",
     "node_2": "nodemon --watch dev -e js dev/networkNode.js 3002 http://localhost:3002",
     "node_3": "nodemon --watch dev -e js dev/networkNode.js 3003 http://localhost:3003",
     "node_4": "nodemon --watch dev -e js dev/networkNode.js 3004 http://localhost:3004",
-    "node_5": "nodemon --watch dev -e js dev/networkNode.js 3005 http://localhost:3005"
+    "node_5": "nodemon --watch dev -e js dev/networkNode.js 3005 http://localhost:3005",
+    "kill": "netstat --numeric-ports --tcp --listening --programs | grep :300 | awk '{print $7}' | cut -d'/' -f1 | xargs -n 1 kill -9",
+    "nodes": "npm run kill; npm run node_1 & npm run node_2 & npm run node_3 & npm run node_4 & npm run node_5 &"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.18.3",
     "chai": "^4.2.0",
+    "cucumber": "^5.0.3",
     "express": "^4.16.4",
     "flatted": "^2.0.0",
     "mocha": "^5.2.0",

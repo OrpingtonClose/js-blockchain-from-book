@@ -6,6 +6,7 @@ class Blockchain() {
     }
 }
 */
+const uuid = require("uuid/v1");
 const sha256 = require('sha256');
 const currentNodeUrl = process.argv[3];
 
@@ -42,11 +43,16 @@ Blockchain.prototype.createNewTransaction = function (amount, sender, recipient)
     const newTransaction = {
         amount: amount,
         sender: sender,
-        recipient: recipient
+        recipient: recipient,
+        transactionId: uuid().split('-').join('')
     };
-    this.pendingTransactions.push(newTransaction);
-    return this.getLastBlock()['index'] + 1;
+    return newTransaction;
 }
+
+Blockchain.prototype.addTransactionToPendingTransactions = function(transactionObj) {
+    this.pendingTransactions.push(transactionObj);
+    return this.getLastBlock()['index'] + 1;
+};
 
 Blockchain.prototype.hashBlock = function (previousblockHash, currentblockData, nonce) {
     const dataAsString = previousblockHash + nonce.toString() + JSON.stringify(currentblockData);

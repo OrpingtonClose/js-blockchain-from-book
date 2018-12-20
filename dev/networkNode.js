@@ -12,17 +12,11 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
 function registerUrl(newNodeUrl) {
-    /*if (!newNodeUrl) {
-        throw("empty url passed!");
-    }*/
     const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
     const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
-    //console.log(`===all===${newNodeUrl}`);
     if (nodeNotAlreadyPresent && notCurrentNode) {
-//        console.trace(`===accepted===${newNodeUrl}`);
         bitcoin.networkNodes.push(newNodeUrl);
     } 
-    //console.log(bitcoin.networkNodes);
 }
 
 app.get("/", function(req, res) {
@@ -34,7 +28,8 @@ app.get("/blockchain", function(req, res) {
 });
 
 app.post("/transaction", function(req, res) {
-    const blockIndex = bitcoin.createNewTransaction(req.body.amount, req.body.sender, req.body.recipient);
+    const newTransaction = req.body;
+    const blockIndex = bitcoin.addTransactionToPendingTransactions(newTransaction);
     res.json({note: `Transaction will be added in block ${blockIndex}`});
 });
 
@@ -60,7 +55,6 @@ app.post('/echo', function(req, res) {
 
 app.post('/register-and-broadcast-node', function(req, res){
     const newNodeUrl = req.body.newNodeUrl;
-    //console.log(`/register-and-broadcast-node ==>${newNodeUrl}`);
     if (bitcoin.networkNodes.indexOf(newNodeUrl) == -1) {
         bitcoin.networkNodes.push(newNodeUrl);
     }
@@ -75,7 +69,6 @@ app.post('/register-and-broadcast-node', function(req, res){
         regNodesPromises.push(rp(requestOptions));
     });
     Promise.all(regNodesPromises).then(data =>{
-        //console.log(`[...bitcoin.networkNodes, bitcoin.currentNodeUrl] => ${[...bitcoin.networkNodes, bitcoin.currentNodeUrl]}`);
         const requestOptions = {
             uri: newNodeUrl + '/register-nodes-bulk',
             method: "POST",
@@ -90,34 +83,56 @@ app.post('/register-and-broadcast-node', function(req, res){
 
 app.post('/register-node', function(req, res){
     const newNodeUrl = req.body.newNodeUrl;
-    registerUrl(newNodeUrl);
-    /*
     const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
     const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
     if (nodeNotAlreadyPresent && notCurrentNode) {
         bitcoin.networkNodes.push(newNodeUrl);
     } 
-    */
     return res.json({note: "new node registered successfully"});
 });
 
 app.post('/register-nodes-bulk', function(req, res){
     const allNetworkNodes = req.body.allNetworkNodes;
-    //console.log('   const allNetworkNodes = req.body.allNetworkNodes;');
-    //console.log(allNetworkNodes);
     allNetworkNodes.forEach( newNodeUrl => {
-        //console.log(`allNetworkNodes.forEach( newNodeUrl => {${newNodeUrl}`);
-        registerUrl(newNodeUrl);
-        /*
         const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
         const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
         if (nodeNotAlreadyPresent && notCurrentNode) {
             console.log(`===${newNodeUrl}`);
             bitcoin.networkNodes.push(newNodeUrl);
         }
-        */
     });
     return res.json({note: "Bulk registration successful."});
+});
+
+app.post('/transaction/broadcast', function(req, res){
+    const {amount, sender, recipient} = req.body;
+    const newTransaction = bitcoin.createNewTransaction(amount, sender, recipient);
+    bitcoin.addTransactionToPendingTransactions(newTransaction);
+    const requestPromises = [];
+    bitcoin.networkNodes.forEach(networkNodeUrl => {
+        const requestOptions = {
+            url: networkNodeUrl + '/transaction',
+            method: 'POST',
+            body: newTransaction,
+            json: true   
+        };
+        requestPromises.push(rp(requestOptions));
+    });
+    Promise.all(requestPromises).then(data=>{
+        res.json({note: 'Transaction created and broadcast successfully.'});
+    });
+/*
+    bitcoin.networkNodes.forEach(networkNodeUrl => {
+        const requestOptions = {
+            uri: networkNodeUrl + "/register-node",
+            method: 'POST',
+            body: {newNodeUrl},
+            json: true
+        };
+        regNodesPromises.push(rp(requestOptions));
+    });
+*/
+
 });
 
 function start(port) {

@@ -25,7 +25,6 @@ curl -X POST -H "Content-Type: application/json" -d @- http://localhost:3001/reg
 {"newNodeUrl": "http://localhost:3002"}
 EOF
 
-
 curl http://localhost:3001/blockchain | jq
 curl http://localhost:3002/blockchain | jq
 
@@ -39,3 +38,49 @@ curl http://localhost:3001/blockchain | jq
 
 ./node_modules/mocha/bin/mocha dev/
 ./node_modules/mocha/bin/mocha dev/promise-test.js
+./node_modules/mocha/bin/mocha dev/test-nodes.js
+
+./node_modules/cucumber/bin/cucumber-js features/ -r steps/
+
+for n in {1..5}
+do 
+    curl http://localhost:300$n/blockchain | jq
+    sleep 1
+done
+
+curl -X POST -H 'Content-Type: application/json' -d @- http://localhost:3001/transaction <<EOF
+{
+    "amount": 100,
+    "sender": "NNFANSDFHYHTN90A09SNFAS",
+    "recipient": "IU99N0A90WENNU234UFAW"
+}
+EOF
+
+curl http://localhost:3001/blockchain | jq '.pendingTransactions' 
+
+###############
+
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3002"}
+EOF
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3003"}
+EOF
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3004"}
+EOF
+
+curl http://localhost:3001/blockchain | jq '.networkNodes[]'
+
+curl -X POST -H 'Content-Type: application/json' -d @- http://localhost:3001/transaction/broadcast <<EOF
+{
+    "amount": 100,
+    "sender": "NNFANSDFHYHTN90A09SNFAS",
+    "recipient": "IU99N0A90WENNU234UFAW"
+}
+EOF
+
+curl http://localhost:3001/blockchain | jq '.pendingTransactions[]'
+curl http://localhost:3002/blockchain | jq '.pendingTransactions[]'
+curl http://localhost:3003/blockchain | jq '.pendingTransactions[]'
+

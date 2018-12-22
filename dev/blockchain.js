@@ -8,15 +8,14 @@ class Blockchain() {
 */
 const uuid = require("uuid/v1");
 const sha256 = require('sha256');
-const currentNodeUrl = process.argv[3];
+//const currentNodeUrl = process.argv[3];
 
-function Blockchain() {
+function Blockchain(currentNodeUrl) {
     this.chain = [];
     this.pendingTransactions = [];
     this.createNewBlock(100, "0", "0");
     this.currentNodeUrl = currentNodeUrl;
     this.networkNodes = [];
-    //console.log("<<<<new chain created>>>>");
 }
 
 Blockchain.prototype.createNewBlock = function (nonce, previousBlockHash, hash) {
@@ -72,7 +71,6 @@ Blockchain.prototype.proofOfWork = function (previousBlockHash, currentblockData
     while (powHash.substr(0, 4) !== prefix) {
         powHash = this.hashBlock(previousBlockHash, currentblockData, nonce);
         let zerosUpFront = hashStringLength - powHash.replace(probeRegex, "").length
-        //if (zerosUpFront === 1) {console.log(powHash);}
 
         if (powResults[zerosUpFront] ) {
             powResults[zerosUpFront] += 1;    
@@ -81,7 +79,6 @@ Blockchain.prototype.proofOfWork = function (previousBlockHash, currentblockData
         }
         nonce += 1;
     }
-    //console.log(powResults);
     return nonce - 1;
 }
 

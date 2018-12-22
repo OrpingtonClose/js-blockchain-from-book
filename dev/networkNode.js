@@ -10,14 +10,8 @@ const nodeAddress = uuid().split("-").join("");
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
-
-function registerUrl(newNodeUrl) {
-    const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
-    const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
-    if (nodeNotAlreadyPresent && notCurrentNode) {
-        bitcoin.networkNodes.push(newNodeUrl);
-    } 
-}
+// const morganBody = require("morgan-body");
+// morganBody(app);
 
 app.get("/", function(req, res) {
     res.status(200).send('ok');
@@ -53,7 +47,7 @@ app.post('/echo', function(req, res) {
     return res.send(stringify(parse(req)));
 });
 
-app.post('/register-and-broadcast-node', function(req, res){
+app.post("/register-and-broadcast-node", function(req, res){
     const newNodeUrl = req.body.newNodeUrl;
     if (bitcoin.networkNodes.indexOf(newNodeUrl) == -1) {
         bitcoin.networkNodes.push(newNodeUrl);
@@ -62,15 +56,16 @@ app.post('/register-and-broadcast-node', function(req, res){
     bitcoin.networkNodes.forEach(networkNodeUrl => {
         const requestOptions = {
             uri: networkNodeUrl + "/register-node",
-            method: 'POST',
+            method: "POST",
             body: {newNodeUrl},
             json: true
         };
         regNodesPromises.push(rp(requestOptions));
     });
+
     Promise.all(regNodesPromises).then(data =>{
         const requestOptions = {
-            uri: newNodeUrl + '/register-nodes-bulk',
+            uri: newNodeUrl + "/register-nodes-bulk",
             method: "POST",
             body: {allNetworkNodes: [...bitcoin.networkNodes, bitcoin.currentNodeUrl]},
             json: true
@@ -97,7 +92,6 @@ app.post('/register-nodes-bulk', function(req, res){
         const nodeNotAlreadyPresent = bitcoin.networkNodes.indexOf(newNodeUrl) == -1;
         const notCurrentNode = bitcoin.currentNodeUrl !== newNodeUrl;
         if (nodeNotAlreadyPresent && notCurrentNode) {
-            console.log(`===${newNodeUrl}`);
             bitcoin.networkNodes.push(newNodeUrl);
         }
     });
@@ -136,9 +130,11 @@ app.post('/transaction/broadcast', function(req, res){
 });
 
 function start(port) {
-    return app.listen(port, () => {
-        console.log(`listening on port ${port}...`);
+    const listener = app.listen(port, () => {
+        bitcoin.currentNodeUrl = `http://[${listener.address().address}]:${listener.address().port}`;
+        //console.log(`listening on port ${port}...`);
     });
+    return listener;
 }
 
 if (module.parent) {

@@ -84,3 +84,19 @@ curl http://localhost:3001/blockchain | jq '.pendingTransactions[]'
 curl http://localhost:3002/blockchain | jq '.pendingTransactions[]'
 curl http://localhost:3003/blockchain | jq '.pendingTransactions[]'
 
+
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3002"}
+EOF
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3003"}
+EOF
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3004"}
+EOF
+curl -H "Content-Type: application/json" -X POST -d @- http://localhost:3001/register-and-broadcast-node <<EOF
+{"newNodeUrl": "http://localhost:3005"}
+EOF
+curl -X POST http://localhost:3001/mine 
+curl http://localhost:3001/blockchain  | jq
+curl http://localhost:3002/blockchain | jq

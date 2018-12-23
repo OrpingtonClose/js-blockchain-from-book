@@ -3,6 +3,7 @@ const request = require('supertest');
 const chai = require("chai");
 const shoud = chai.should();
 const expect = chai.expect;
+const rp = require("request-promise");
 
 describe('is supertest working at all?', function() {
     let server;
@@ -28,10 +29,15 @@ describe('network nodes registration', function() {
         Object.keys(require.cache).forEach(key=>{
             delete require.cache[key];
         });
-        newServer = require('./networkNode')(3010);
-        broadcastServer = require('./networkNode')(3011);
+        let startServer = function(port) {
+            (async function() { await exec(`netstat --numeric-ports --tcp --listening --programs | grep :${port} | awk '{print $7}' | cut -d'/' -f1 | xargs -n 1 kill -9`) })();
+            return require('./networkNode')(port);
+        }
+        
+        newServer = startServer(3010);
+        broadcastServer = startServer(3011);
         otherServers = [...Array(3).keys()].map(n => n + 3015)
-                                           .map(n => require('./networkNode')(n));
+                                           .map(n => startServer(n));
         allServers = [newServer, broadcastServer, ...otherServers];
     });
     afterEach((done)=>{
@@ -61,7 +67,6 @@ describe('network nodes registration', function() {
             sender: "ABC", 
             recipient: "XYZ"
         };
-        const rp = require("request-promise");
 
         (async function() {
             await Promise.all(urls.map(url => {
@@ -74,7 +79,7 @@ describe('network nodes registration', function() {
                 return rp(requestOptions);
             })).catch(err=>{
                 done(err);
-            })            
+            });    
             await rp({uri: urls[2] + "/transaction/broadcast",
                 method: "POST",
                 body: transactionToSend,
@@ -96,6 +101,134 @@ describe('network nodes registration', function() {
                 done();
             });      
         })();
+    });
+
+    it("mine and broadcast mined block", done => {
+        let urls = allServers.map(server => `http://[${server.address().address}]:${server.address().port}`);
+        let broadcastUrl = `http://[${broadcastServer.address().address}]:${broadcastServer.address().port}`;
+
+        (async function() {
+            await Promise.all(urls.map(url => {
+                const requestOptions = {
+                    uri: broadcastUrl + "/register-and-broadcast-node",
+                    method: "POST",
+                    body: {newNodeUrl: url},
+                    json: true
+                };
+                return rp(requestOptions);
+            })).catch(err=>{
+                done(err);
+            });
+
+            let blockMined;
+            await rp({uri: broadcastUrl + "/mine",
+                method: "POST",
+                json: true
+            }).then(data=>{
+                blockMined = data.block;
+            }).catch(err=>{
+                done(err);
+            });
+
+            await Promise.all(urls.map(function(url) {
+                return rp({uri: url + "/blockchain",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    const chain = res.chain;
+                    const lastBlock = chain[res.chain.length-1];
+                    expect(lastBlock).to.be.deep.equal(blockMined);
+                });
+            })).then(data=>{
+                done();
+            }).catch(err=>{
+                done(err);
+            });
+        })();
+    });
+
+    it.only("propagate mineing rewards to next block", done => {
+        let urls = allServers.map(server => `http://[${server.address().address}]:${server.address().port}`);
+        let broadcastUrl = `http://[${broadcastServer.address().address}]:${broadcastServer.address().port}`;
+
+        (async function() {
+
+            // await rp({uri: broadcastUrl + "/register-and-broadcast-node",
+            //     method: "POST",
+            //     body: {newNodeUrl: urls[0]},
+            //     json: true
+            // });
+
+            // await rp({uri: broadcastUrl + "/register-and-broadcast-node",
+            //     method: "POST",
+            //     body: {newNodeUrl: urls[2]},
+            //     json: true
+            // });
+
+            // await rp({uri: broadcastUrl + "/register-and-broadcast-node",
+            //     method: "POST",
+            //     body: {newNodeUrl: urls[3]},
+            //     json: true
+            // });
+            
+            // await rp({uri: broadcastUrl + "/register-and-broadcast-node",
+            //     method: "POST",
+            //     body: {newNodeUrl: urls[4]},
+            //     json: true
+            // });            
+
+            // await Promise.all(urls.map(url => {
+            //     const requestOptions = {
+            //         uri: broadcastUrl + "/register-and-broadcast-node",
+            //         method: "POST",
+            //         body: {newNodeUrl: url},
+            //         json: true
+            //     };
+            //     return rp(requestOptions);
+            // })).catch(err=>{
+            //     done(err);
+            // });
+
+            // let blockMined;
+            // await rp({
+            //     uri: broadcastUrl + "/mine",
+            //     method: "POST",
+            //     json: true
+            // }).then(data=>{
+            //     blockMined = data.block;
+            // }).catch(err=>{
+            //     done(err);
+            // });
+            
+            // let miningNodechain;
+            // await rp({
+            //     uri:  broadcastUrl + "/blockchain",
+            //     method: "GET",
+            //     json: true
+            // }).then(data=>{
+            //     miningNodechain = data;
+            // }).catch(err=>{
+            //     done(err);
+            // });
+
+            await Promise.all(urls.slice(-2).map(function(url) {
+                console.log(url + "/blockchain");
+                return rp({uri: url + "/blockchain",
+                    method: "GET"
+                    //json: true
+                }).then(res=>{
+                    console.log(res);
+                    // let referenceTransaction = miningNodechain.pendingTransactions[0];
+                    // const pendingTransactions = res.pendingTransactions;
+                    // expect(pendingTransactions).to.have.lengthOf(1);
+                    // expect(pendingTransactions[0]).to.be.deep.equal(referenceTransaction);
+                });
+            })).then(data=>{
+                done();
+            }).catch(err=>{
+                done(err);
+            });      
+        })();        
     });
 
     it('register and brodcast node', function(done) {

@@ -23,6 +23,7 @@
     "cucumber": "^5.0.3",
     "express": "^4.16.4",
     "flatted": "^2.0.0",
+    "leveldb": "^0.7.1",
     "mocha": "^5.2.0",
     "morgan": "^1.9.1",
     "morgan-body": "^2.4.5",

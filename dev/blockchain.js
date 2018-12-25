@@ -1,14 +1,5 @@
-/*
-class Blockchain() {
-    constructor() {
-        this.chain = [];
-        this.newTransaction = [];
-    }
-}
-*/
 const uuid = require("uuid/v1");
 const sha256 = require('sha256');
-//const currentNodeUrl = process.argv[3];
 
 function Blockchain(currentNodeUrl) {
     this.chain = [];

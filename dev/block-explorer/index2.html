@@ -1,0 +1,183 @@
+<head>
+    <title>Block Explorer</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js" 
+            integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" 
+            crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" 
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" 
+            crossorigin="anonymous"></script>
+    <link rel="stylesheet" 
+          type="text/css" 
+          href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">  
+</head>
+
+<body ng-app="BlockExplorer">
+<div class="container" ng-controller="MainController">
+    <button ng-click="fetchBlock(searchValue)">One</button>
+    <button ng-click="fetchTransaction(searchValue)">Two</button>
+    <button ng-click="fetchAddressData(searchValue)">ooo {{ searchType }}</button>
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 id="page-title">Block Explorer</h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <form ng-submit="search(searchValue)">
+                <div class="form-group">
+                    <input type="text" ng-model="searchValue">
+                </div>
+                <div class="form-group">
+                    <select class="form-control" ng-model="searchType" ng-options="t for t in searchTypes"></select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-search margin-auto">Search</button>
+            </form>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-10 offset-md-1">
+            <table ng-if="block">
+                <tbody>
+                    <tr>
+                        <td>Block Hash</td>
+                        <td>{{ block.hash }}</td>
+                    </tr>
+                    <tr>
+                        <td>Index</td>
+                        <td>{{ block.index }}</td>
+                    </tr>
+                    <tr>
+                        <td>Time Stamp</td>
+                        <td>{{ block.timestamp }}</td>
+                    </tr>
+                    <tr>
+                        <td>Nonce</td>
+                        <td>{{ block.nonce }}</td>
+                    </tr>
+                    <tr>
+                        <td>Previous Hash</td>
+                        <td><span ng-click="fetchBlock(block.previousBlockHash)">{{ block.previousBlockHash }}</span></td>
+                    </tr>                        
+                </tbody>
+            </table>
+            <table ng-if="block.transactions">
+                <thead>
+                    <tr>
+                        <th scope="col">Transaction Id</th>                                                
+                        <th scope="col">Sender</th>
+                        <th scope="col">Recipient</th>
+                        <th scope="col">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="transaction in block.transactions">
+                        <td><span ng-click="fetchTransaction(transaction.transactionId)">{{ transaction.transactionId }}</span></td>                        
+                        <td><span ng-click="fetchAddressData(transaction.sender)">{{ transaction.sender }}</span></td>
+                        <td><span ng-click="fetchAddressData(transaction.recipient)">{{ transaction.recipient }}</span></td>
+                        <td>{{ transaction.amount }}</td>
+                    </tr>                    
+                </tbody>
+            </table>
+            <table ng-if="transaction.block">
+                <tbody>
+                    <tr>
+                        <td>Block Hash</td>
+                        <td><span ng-click="fetchBlock(transaction.block.hash)">{{ transaction.block.hash }}</span></td>
+                    </tr>                        
+                </tbody>
+            </table>                        
+            <table ng-if="transaction">
+                <tbody>
+                    <tr>
+                        <td>Transaction Id</td>
+                        <td><span ng-click="fetchTransaction(transaction.transactionId)">{{ transaction.transactionId }}</span></td>
+                    </tr>                    
+                    <tr>
+                        <td>Sender</td>
+                        <td><span ng-click="fetchAddressData(transaction.sender)">{{ transaction.sender }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Recipient</td>
+                        <td><span ng-click="fetchAddressData(transaction.recipient)">{{ transaction.recipient }}</span></td>
+                    </tr>
+                    <tr>
+                        <td>Amount</td>
+                        <td>{{ transaction.amount }}</td>
+                    </tr>                           
+                </tbody>
+            </table>
+            <table ng-if="addressData">
+                <thead>
+                    <tr>
+                        <th scope="col">Transaction Id</th>                        
+                        <th scope="col">Sender</th>
+                        <th scope="col">Recipient</th>
+                        <th scope="col">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr ng-repeat="transaction in addressData.addressTransactions">
+                        <td><span ng-click="fetchTransaction(transaction.transactionId)">{{ transaction.transactionId }}</span></td>
+                        <td><span ng-click="fetchAddressData(transaction.sender)">{{ transaction.sender }}</span></td>
+                        <td><span ng-click="fetchAddressData(transaction.recipient)">{{ transaction.recipient }}</span></td>
+                        <td>{{ transaction.amount }}</td>
+                    </tr>                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        window.app = angular.module('BlockExplorer', []);
+        app.controller('MainController', function($scope, $http) {
+            $scope.searchTypes = ["block", "transaction", "address"];
+            $scope.block = null;
+            $scope.transaction = null;
+            $scope.addressData = null;
+            $scope.initialSearchMade = false;
+            $scope.fetchBlock = function(blockHash) {
+                $scope.searchType = "block";
+                $scope.searchValue = blockHash;                
+                $http.get(`/block/${blockHash}`).then(response=>{
+                    console.log(response);
+                    $scope.block = response.data.block;
+                    $scope.transaction = null;
+                    $scope.addressData = null;                    
+                });
+            }
+            $scope.fetchTransaction = function(transactionId) {
+                $scope.searchType = "transaction";
+                $scope.searchValue = transactionId;
+                $http.get(`/transaction/${transactionId}`).then(response=>{
+                    $scope.transaction = response.data.transaction;
+                    $scope.transaction.block = response.data.block;                    
+                    $scope.block = null;
+                    $scope.addressData = null;                    
+                });
+            }
+            $scope.fetchAddressData = function(address) {
+                $scope.searchType = "address";
+                $scope.searchValue = address;
+                $http.get(`/address/${address}`).then(response=>{
+                    $scope.addressData = response.data.addressData;
+                    if(!$scope.addressData.addressTransactions.length) {
+                        $scope.addressData = null;
+                    }
+                    $scope.transaction = null;
+                    $scope.block = null;                    
+                });
+            }
+            $scope.search = function(searchValue) {
+                
+                $scope.initialSearchMade = true;
+                if ($scope.searchType === "block"){
+                    $scope.fetchBlock(searchValue);
+                } else if ($scope.searchType === "transaction") {
+                    $scope.fetchTransaction(searchValue);
+                } else if ($scope.searchType === "address") {
+                    $scope.fetchAddressData(searchValue);
+                };
+            };
+        });
+    </script>
+</body>

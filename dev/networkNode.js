@@ -200,20 +200,33 @@ app.get('/consensus', function(req, res){
 
 app.get('/block/:blockHash', function(req, res) {
     const blockHash = req.params.blockHash;
-    const correctBlock = this.getBlock(blockHash);
+    const correctBlock = bitcoin.getBlock(blockHash);
+    console.log({block: correctBlock});
     res.json({block: correctBlock});
 });
 
 app.get('/transaction/:transactionId', function(req, res) {
     const transactionId = req.params.transactionId;
-    const correctTransaction = this.getTransaction(transactionId);
-    res.json({transaction: correctTransaction});
+    const transactionData = bitcoin.getTransaction(transactionId);
+    res.json(transactionData);
 });
 
 app.get('/address/:address', function(req, res) {
     const address = req.params.address;
-    const addressTransactions = this.getAddress(address);
-    res.json({address: addressTransactions});
+    const addressData = bitcoin.getAddressData(address);
+    res.json({addressData});
+    // res.json({
+    //     addressTransactions: addressData.addressTransactions,
+    //     addressBalance: addressData.addressBalance
+    // });
+});
+
+app.get('/block-explorer', function(req, res){
+    res.sendFile('./block-explorer/index.html', {root: __dirname});
+});
+
+app.get('/block-explorer1', function(req, res){
+    res.sendFile('./block-explorer/index2.html', {root: __dirname});
 });
 
 function start(port) {

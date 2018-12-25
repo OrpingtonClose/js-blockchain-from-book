@@ -100,3 +100,29 @@ EOF
 curl -X POST http://localhost:3001/mine 
 curl http://localhost:3001/blockchain  | jq
 curl http://localhost:3002/blockchain | jq
+
+##
+
+curl -X POST -H 'Content-Type: application/json' -d @- http://localhost:3001/transaction/broadcast <<EOF
+{
+    "amount": 10340,
+    "sender": "IU99N0A90WENNU234UFAW",
+    "recipient": "IU9dddd9N0A90WENNU234UFAW"
+}
+EOF
+
+curl -X POST http://localhost:3001/mine
+curl -X POST -H 'Content-Type: application/json' -d @- http://localhost:3001/transaction <<EOF
+{
+    "amount": 100,
+    "sender": "NNFAN90A09SNFAS",
+    "recipient": "IU9dddd9N0A90WENNU234UFAW"
+}
+EOF
+curl -X POST http://localhost:3001/mine
+
+curl http://localhost:3001/block/00006b8fdbb6edbea41a0a88b386055f59d2200db418aa71cd0c0bd092eaa9de
+curl http://localhost:3001/block/00006b8fdbb6edbea41a0a88b386055f59d2200db418aa71cd0c0bd092eaa9
+
+curl http://localhost:3001/block/0000b5f516e06fe4ccafb927104b552bc6b17c3cb0f323af4a846ca05f7f903d
+

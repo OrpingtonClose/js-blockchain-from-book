@@ -138,7 +138,7 @@ Blockchain.prototype.chainIsValid = function(blockchain) {
 }
 
 Blockchain.prototype.getBlock = function(blockHash) {
-    let correctBlock;
+    let correctBlock = null;
     this.chain.forEach(block => {
         if (block.hash === blockHash) {
             correctBlock = block;
@@ -148,27 +148,44 @@ Blockchain.prototype.getBlock = function(blockHash) {
 }
 
 Blockchain.prototype.getTransaction = function(transactionId) {
+    let correctTransaction = null;
+    let correctBlock = null;
     for (let block = 0; block < this.chain.length; block += 1) {
         let transactions = this.chain[block].transactions;
         for (let transaction = 0; transaction < transactions.length; transaction += 1 ) {
             if (transactions[transaction].transactionId === transactionId) {
-                return transactions[transaction];
+                correctTransaction = transactions[transaction];
+                correctBlock = this.chain[block];
             }
         }
     }
+    return {
+        transaction: correctTransaction,
+        block: correctBlock
+    };
 }
 
-Blockchain.prototype.getAddress = function(address) {
+Blockchain.prototype.getAddressData = function(address) {
     let transactionsFound = [];
+    let balance = 0;
     for (let block = 0; block < this.chain.length; block += 1) {
         let transactions = this.chain[block].transactions;
         for (let transaction = 0; transaction < transactions.length; transaction += 1 ) {
-            if (transactions[transaction].sender === address) {
+            let {sender, recipient} = transactions[transaction];
+            if (sender === address) {
+                balance -= transactions[transaction].amount;
                 transactionsFound.push(transactions[transaction]);
             }
+            if (recipient === address) {
+                balance += transactions[transaction].amount;
+                transactionsFound.push(transactions[transaction]);
+            }            
         }
-    }
-    return transactionsFound;
+    }   
+    return {
+        addressTransactions: transactionsFound,
+        addressBalance: balance
+    };
 }
 
 module.exports = Blockchain;

@@ -4,6 +4,7 @@ const chai = require("chai");
 const shoud = chai.should();
 const expect = chai.expect;
 const rp = require("request-promise");
+const req = require("request");
 
 describe('is supertest working at all?', function() {
     let server;
@@ -180,6 +181,156 @@ describe('network nodes registration', function() {
                 done(err);
             });
         })();
+    });
+
+    describe('after all nodes know each other', function(done){  
+        let newServerUrl;
+        const transactionsToSend = [{
+                amount: 17,
+                sender: "CCCCCC",
+                recipient: "AAAA"
+            },{
+                amount: 10,
+                sender: "AAAA",
+                recipient: "CCCCCC"
+            },{
+                amount: 100,
+                sender: "BBBBBB",
+                recipient: "CCCCCC"
+            }
+        ];
+        
+        beforeEach(()=>{
+            newServerUrl = `http://localhost:${newServer.address().port}`;
+
+            for (let n = 0; n < 3; n += 1) {
+                
+                req({
+                    uri: newServerUrl + '/transaction/broadcast',
+                    method: 'POST',
+                    body: transactionsToSend[n],
+                    json: true
+                });
+                req({
+                    uri: newServerUrl + "/mine",
+                    method: "POST"
+                });
+            }
+        });
+
+        it("should be able to fetch a block by hash", done=>{
+            (async function() {
+                let block;
+                await rp({uri: newServerUrl + "/blockchain",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    block = res.chain[1];
+                });
+                await rp({uri: newServerUrl + "/block/" + block.hash,
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res.block).to.be.deep.equal(block);
+                }).then(data=>{
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });
+        it("should return null if inexisting block hash was fetch", done=>{
+            (async function() {
+                await rp({uri: newServerUrl + "/block/notexisting",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res).to.be.deep.equal({block: null});
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });   
+        it("should be able to fetch a transaction by transactionId", done=>{
+            (async function() {
+                let block;
+                let transaction;
+                await rp({uri: newServerUrl + "/blockchain",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    block = res.chain[1];
+                    transaction = block.transactions[0];
+                });
+                await rp({uri: newServerUrl + "/transaction/" + transaction.transactionId,
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res).to.be.deep.equal({transaction, block});
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });
+        it("should return an adequate response if transaction that wasn't existing was fetched", done=>{
+            (async function() {
+                await rp({uri: newServerUrl + "/transaction/notexisting",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res).to.be.deep.equal({transaction: null, block: null});
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });
+
+        it.only("should be able to fetch an address transactions by address", done=>{
+            (async function() {
+                await rp({uri: newServerUrl + "/address/CCCCCC",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res.addressTransactions[0]).to.include(transactionsToSend[0]);
+                    expect(res.addressTransactions[1]).to.include(transactionsToSend[1]);
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });
+        it("should be able to fetch an address balance by address", done=>{
+            (async function() {
+                await rp({uri: newServerUrl + "/address/CCCCCC",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res.addressBalance).to.be.equal(93);
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });        
+        it("should return an adequate response if an unused address was fetched", done=>{
+            (async function() {
+                await rp({uri: newServerUrl + "/address/DOESNTEXIST",
+                    method: "GET",
+                    json: true
+                }).then(res=>{
+                    expect(res).to.be.deep.equal({addressData:{
+                        addressTransactions: [],
+                        addressBalance: 0
+                    }});
+                    done();
+                }).catch(err=>{
+                    done(err);
+                });
+            })();
+        });   
     });
 
     describe('after all nodes know each other', function(done){  

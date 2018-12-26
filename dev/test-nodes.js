@@ -32,7 +32,6 @@ describe('network nodes registration', function() {
             Object.keys(require.cache).forEach(key=>{
                 delete require.cache[key];
             });
-            //(async function() { await exec(`netstat --numeric-ports --tcp --listening --programs | grep :${port} | awk '{print $7}' | cut -d'/' -f1 | xargs -n 1 kill -9`) })();
             return require('./networkNode')(port);
         }
         
@@ -67,7 +66,8 @@ describe('network nodes registration', function() {
                                 .send({newNodeUrl})
                                 .then(res=>{
                                     request(broadcastServer).get('/blockchain').then(blockchainRes=>{
-                                        expect(blockchainRes.body.networkNodes).to.be.an('array').that.includes(newNodeUrl);
+                                        let {networkNodes} = blockchainRes.body;
+                                        expect(networkNodes).to.be.an('array').that.includes(newNodeUrl);
                                     }).then(data=>{
                                         done();
                                     }).catch(err=>{
@@ -128,6 +128,7 @@ describe('network nodes registration', function() {
     });
     
     it('accept longest chain as valid', function(done){
+        this.timeout(5000);
         let newServerUrl = `http://localhost:${newServer.address().port}`;
         let broadcastServerUrl = `http://localhost:${broadcastServer.address().port}`;
         let otherServerUrls = otherServers.map(server => `http://localhost:${server.address().port}`);
@@ -288,14 +289,15 @@ describe('network nodes registration', function() {
             })();
         });
 
-        it.only("should be able to fetch an address transactions by address", done=>{
+        it("should be able to fetch an address transactions by address", done=>{
             (async function() {
                 await rp({uri: newServerUrl + "/address/CCCCCC",
                     method: "GET",
                     json: true
                 }).then(res=>{
-                    expect(res.addressTransactions[0]).to.include(transactionsToSend[0]);
-                    expect(res.addressTransactions[1]).to.include(transactionsToSend[1]);
+                    let transactionsFetched = res.addressData.addressTransactions;
+                    expect(transactionsFetched[0]).to.include(transactionsToSend[0]);
+                    expect(transactionsFetched[1]).to.include(transactionsToSend[1]);
                     done();
                 }).catch(err=>{
                     done(err);
@@ -308,7 +310,7 @@ describe('network nodes registration', function() {
                     method: "GET",
                     json: true
                 }).then(res=>{
-                    expect(res.addressBalance).to.be.equal(93);
+                    expect(res.addressData.addressBalance).to.be.equal(93);
                     done();
                 }).catch(err=>{
                     done(err);
@@ -375,7 +377,6 @@ describe('network nodes registration', function() {
                         method: "GET",
                         json: true
                     }).then(res=>{
-                        //console.log(res);
                         let pendingTransaction = res.pendingTransactions[0];
                         expect(pendingTransaction.amount).to.be.equal(transactionToSend.amount);
                         expect(pendingTransaction.sender).to.be.equal(transactionToSend.sender);

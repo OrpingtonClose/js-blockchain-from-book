@@ -1,13 +1,51 @@
 const uuid = require("uuid/v1");
 const sha256 = require('sha256');
+const fsdb = require('./fsdb');
+const db = new fsdb(true);
 
 function Blockchain(currentNodeUrl) {
     this.chain = [];
+    this.currentNodeUrl = currentNodeUrl;
     this.pendingTransactions = [];
     this.createNewBlock(100, "0", "0");
-    this.currentNodeUrl = currentNodeUrl;
     this.networkNodes = [];
 }
+
+Blockchain.prototype.__defineGetter__("chain", function(){
+    let block = db.get("block.last");
+    let previousBlock;
+    var chain = [];
+    let sameBlockFetched;
+    while (block && !sameBlockFetched) {
+        chain.unshift(block);
+        previousBlock = block;
+        block = db.get(`block.${block.previousBlockHash}`);
+        sameBlockFetched = JSON.stringify(block) === JSON.stringify(previousBlock);
+    }
+    return chain;
+});
+Blockchain.prototype.__defineSetter__("chain", function(value){
+    //no validation for now
+    for (let blockNum = 0; blockNum < value.length; blockNum += 1) {
+        db.put(`block.${value.hash}`, value[blockNum]);
+        if (blockNum === (value.length - 1)) {
+            db.put(`block.last`, value[blockNum]);
+        }
+    }
+});
+Blockchain.prototype.__defineGetter__("pendingTransactions", function(){
+    return db.get(`transactions.pending.${sha256(this.currentNodeUrl)}`);
+});
+Blockchain.prototype.__defineSetter__("pendingTransactions", function(value){
+    db.put(`transactions.pending.${sha256(this.currentNodeUrl)}`, value);
+});
+
+Blockchain.prototype.__defineGetter__("networkNodes", function(){
+    return db.get(`node.url.${sha256(this.currentNodeUrl)}`);
+});
+Blockchain.prototype.__defineSetter__("networkNodes", function(value){
+    db.put(`node.url.${sha256(this.currentNodeUrl)}`, value);
+});
 
 Blockchain.prototype.createNewBlock = function (nonce, previousBlockHash, hash) {
     const newBlock = {
@@ -20,13 +58,16 @@ Blockchain.prototype.createNewBlock = function (nonce, previousBlockHash, hash) 
     }
 
     this.pendingTransactions = [];
-    this.chain.push(newBlock);
 
+    this.chain = this.chain.concat(newBlock);
+
+    db.put(`block.last`, newBlock);
+    db.put(`block.${hash}`, newBlock);
     return newBlock;
 }
 
 Blockchain.prototype.getLastBlock = function () {
-    return this.chain[this.chain.length - 1];
+    return db.get(`block.last`);
 }
 
 Blockchain.prototype.createNewTransaction = function (amount, sender, recipient) {
@@ -40,7 +81,9 @@ Blockchain.prototype.createNewTransaction = function (amount, sender, recipient)
 }
 
 Blockchain.prototype.addTransactionToPendingTransactions = function(transactionObj) {
-    this.pendingTransactions.push(transactionObj);
+    const {pendingTransactions} = this;
+    pendingTransactions.push(transactionObj);
+    this.pendingTransactions = pendingTransactions;
     return this.getLastBlock()['index'] + 1;
 };
 

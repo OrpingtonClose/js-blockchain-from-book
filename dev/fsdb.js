@@ -13,25 +13,26 @@ function db(createNew) {
 }
 
 db.prototype.put = function(key, value) {
-    fs.writeFileSync(`${filePrefix}${key}`, value);
+    fs.writeFileSync(`${filePrefix}${key}`, JSON.stringify(value));
 }
 
 db.prototype.get = function(key) {
+    let result = "{}";
     try {
-        let result = fs.readFileSync(`${filePrefix}${key}`);
-        return result;
+        result = fs.readFileSync(`${filePrefix}${key}`).toString();
     }
     catch {
         //nothing
     }
-    
-    const files = fs.readdirSync(".");
-    for (let n; n < files.length; n += 1) {
-        if (files[n].startsWith(`${filePrefix}${key}`)) {
-            return files[n];
+    if (!result) {
+        const files = fs.readdirSync(".");
+        for (let n = 0; n < files.length; n += 1) {
+            if (files[n].startsWith(`${filePrefix}${key}`)) {
+                result = fs.readFileSync(files[n]).toString();
+            }
         }
     }
-    return "";
+    return JSON.parse(result);
 }
 db.prototype.del = function(key) {
     fs.unlinkSync(key);
